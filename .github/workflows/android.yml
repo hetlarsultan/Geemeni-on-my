@@ -1,4 +1,4 @@
-name: 🚀 Build Android APK
+name: Build Android APK
 
 on:
   push:
@@ -9,121 +9,74 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-apk:
+  build:
     runs-on: ubuntu-latest
 
     steps:
-      # =========================
-      # Clone Repository
-      # =========================
-      - name: 📥 Checkout Project
+      - name: Checkout
         uses: actions/checkout@v4
 
-      # =========================
-      # Setup Node.js
-      # =========================
-      - name: 🟢 Setup Node.js
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
 
-      # =========================
-      # Install Dependencies
-      # =========================
-      - name: 📦 Install Dependencies
+      - name: Install Dependencies
         run: npm install
 
-      # =========================
-      # Build Web App
-      # =========================
-      - name: 🏗 Build Web App
+      - name: Verify Project Files
+        run: |
+          echo "Checking src directory"
+          ls
+          ls src
+
+      - name: Build Vite App
         run: npm run build
 
-      # =========================
-      # Setup Java
-      # =========================
-      - name: ☕ Setup Java 17
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
 
-      # =========================
-      # Install Capacitor
-      # =========================
-      - name: ⚡ Install Capacitor
+      - name: Install Capacitor
         run: |
           npm install @capacitor/core
           npm install @capacitor/cli
           npm install @capacitor/android
+          npm install @capacitor/camera
+          npm install @capacitor/filesystem
+          npm install @capacitor/network
+          npm install @capacitor/device
 
-      # =========================
-      # Capacitor Init
-      # =========================
-      - name: 📱 Initialize Capacitor
+      - name: Init Capacitor
         run: |
-          npx cap init "AI Video Studio" "com.aivideo.studio" --web-dir=dist
+          npx cap init "AI Video Studio" "com.aistudio.app" --web-dir=dist
 
-      # =========================
-      # Add Android Platform
-      # =========================
-      - name: 🤖 Add Android Platform
+      - name: Add Android
         run: npx cap add android
 
-      # =========================
-      # Sync Capacitor
-      # =========================
-      - name: 🔄 Sync Capacitor
+      - name: Sync Android
         run: npx cap sync android
 
-      # =========================
-      # Grant Permission
-      # =========================
-      - name: 🔐 Grant Gradle Permission
-        run: chmod +x android/gradlew
+      - name: Add Camera Permissions
+        run: |
+          sed -i '/<manifest/a \
+          <uses-permission android:name="android.permission.CAMERA"/>\
+          <uses-permission android:name="android.permission.RECORD_AUDIO"/>\
+          <uses-permission android:name="android.permission.INTERNET"/>\
+          <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>\
+          <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>' android/app/src/main/AndroidManifest.xml
 
-      # =========================
-      # Build Debug APK
-      # =========================
-      - name: 🛠 Build Debug APK
+      - name: Build APK
         run: |
           cd android
+          chmod +x gradlew
           ./gradlew assembleDebug
 
-      # =========================
-      # Build Release APK
-      # =========================
-      - name: 🚀 Build Release APK
-        run: |
-          cd android
-          ./gradlew assembleRelease
-
-      # =========================
-      # Upload Debug APK
-      # =========================
-      - name: 📤 Upload Debug APK
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: debug-apk
+          name: app-debug
           path: android/app/build/outputs/apk/debug/app-debug.apk
-
-      # =========================
-      # Upload Release APK
-      # =========================
-      - name: 📤 Upload Release APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-apk
-          path: android/app/build/outputs/apk/release/app-release-unsigned.apk
-
-      # =========================
-      # Upload Build Logs
-      # =========================
-      - name: 🧾 Upload Logs
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: build-logs
-          path: |
-            android/app/build/outputs/logs/
