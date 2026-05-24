@@ -1,0 +1,129 @@
+name: 🚀 Build Android APK
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+
+    steps:
+      # =========================
+      # Clone Repository
+      # =========================
+      - name: 📥 Checkout Project
+        uses: actions/checkout@v4
+
+      # =========================
+      # Setup Node.js
+      # =========================
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # =========================
+      # Install Dependencies
+      # =========================
+      - name: 📦 Install Dependencies
+        run: npm install
+
+      # =========================
+      # Build Web App
+      # =========================
+      - name: 🏗 Build Web App
+        run: npm run build
+
+      # =========================
+      # Setup Java
+      # =========================
+      - name: ☕ Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      # =========================
+      # Install Capacitor
+      # =========================
+      - name: ⚡ Install Capacitor
+        run: |
+          npm install @capacitor/core
+          npm install @capacitor/cli
+          npm install @capacitor/android
+
+      # =========================
+      # Capacitor Init
+      # =========================
+      - name: 📱 Initialize Capacitor
+        run: |
+          npx cap init "AI Video Studio" "com.aivideo.studio" --web-dir=dist
+
+      # =========================
+      # Add Android Platform
+      # =========================
+      - name: 🤖 Add Android Platform
+        run: npx cap add android
+
+      # =========================
+      # Sync Capacitor
+      # =========================
+      - name: 🔄 Sync Capacitor
+        run: npx cap sync android
+
+      # =========================
+      # Grant Permission
+      # =========================
+      - name: 🔐 Grant Gradle Permission
+        run: chmod +x android/gradlew
+
+      # =========================
+      # Build Debug APK
+      # =========================
+      - name: 🛠 Build Debug APK
+        run: |
+          cd android
+          ./gradlew assembleDebug
+
+      # =========================
+      # Build Release APK
+      # =========================
+      - name: 🚀 Build Release APK
+        run: |
+          cd android
+          ./gradlew assembleRelease
+
+      # =========================
+      # Upload Debug APK
+      # =========================
+      - name: 📤 Upload Debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+
+      # =========================
+      # Upload Release APK
+      # =========================
+      - name: 📤 Upload Release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-apk
+          path: android/app/build/outputs/apk/release/app-release-unsigned.apk
+
+      # =========================
+      # Upload Build Logs
+      # =========================
+      - name: 🧾 Upload Logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: build-logs
+          path: |
+            android/app/build/outputs/logs/
